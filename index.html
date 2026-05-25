@@ -1,0 +1,2298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wescayl — Client Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
+    <style>
+        :root {
+            --bg:            #071220;
+            --bg-sidebar:    #060f1a;
+            --bg-card:       rgba(255,255,255,0.04);
+            --bg-hover:      rgba(255,255,255,0.07);
+            --text-primary:  #D6E4F7;
+            --text-secondary:rgba(190,215,245,0.7);
+            --text-muted:    rgba(160,195,235,0.45);
+            --accent:        #1b4d99;
+            --accent-light:  rgba(27,77,153,0.18);
+            --border:        rgba(255,255,255,0.08);
+            --border-strong: rgba(255,255,255,0.15);
+            --green:  #22c55e; --green-bg:  rgba(34,197,94,0.12);
+            --yellow: #FBBF24; --yellow-bg: rgba(251,191,36,0.12);
+            --red:    #ef4444; --red-bg:    rgba(239,68,68,0.12);
+            --blue:   #60a5fa; --blue-bg:   rgba(96,165,250,0.12);
+            --purple: #a78bfa; --purple-bg: rgba(167,139,250,0.12);
+            --sidebar-w: 244px;
+            --header-h:  58px;
+            --r: 8px;
+            --font: 'Plus Jakarta Sans', system-ui, sans-serif;
+            --mono: 'JetBrains Mono', monospace;
+        }
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+        html { overflow-x:hidden; }
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+        }
+
+        /* ── Spinner ── */
+        .spinner {
+            width:28px; height:28px;
+            border:2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius:50%;
+            animation: spin .7s linear infinite;
+        }
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        /* ── Loading overlay ── */
+        #loading-overlay {
+            position:fixed; inset:0; background:var(--bg);
+            display:flex; flex-direction:column;
+            align-items:center; justify-content:center;
+            gap:14px; z-index:300;
+        }
+        #loading-overlay p { color:var(--text-secondary); font-size:14px; }
+
+        /* ═══════════════════════════════════════
+           LOGIN SCREEN
+        ═══════════════════════════════════════ */
+        #login-screen {
+            display:none;
+            min-height:100vh;
+            align-items:center;
+            justify-content:center;
+            padding:24px;
+            background: radial-gradient(ellipse at 50% 0%, rgba(27,77,153,0.22) 0%, transparent 65%);
+        }
+        .login-box { width:100%; max-width:460px; text-align:center; }
+        .login-logo {
+            display:inline-flex; align-items:center; gap:10px; margin-bottom:36px;
+        }
+        .logo-mark {
+            width:40px; height:40px; border-radius:10px;
+            background:var(--accent); display:flex; align-items:center;
+            justify-content:center; font-size:18px; font-weight:800; color:#fff;
+        }
+        .logo-text { font-size:22px; font-weight:700; }
+        .login-title { font-size:26px; font-weight:700; margin-bottom:6px; }
+        .login-sub { color:var(--text-secondary); font-size:14px; margin-bottom:36px; }
+        .brand-list { display:flex; flex-direction:column; gap:10px; }
+        .brand-card {
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--r); padding:14px 18px;
+            display:flex; align-items:center; gap:14px;
+            cursor:pointer; text-align:left;
+            transition:background .15s, border-color .15s, transform .12s;
+        }
+        .brand-card:hover {
+            background:var(--bg-hover); border-color:var(--accent);
+            transform:translateY(-1px);
+        }
+        .brand-avatar {
+            width:40px; height:40px; border-radius:9px;
+            display:flex; align-items:center; justify-content:center;
+            font-size:15px; font-weight:700; color:#fff; flex-shrink:0;
+        }
+        .brand-card-info h3 { font-size:14px; font-weight:600; margin-bottom:2px; }
+        .brand-card-info p  { font-size:12px; color:var(--text-secondary); }
+        .brand-card-arrow   { margin-left:auto; color:var(--text-muted); font-size:18px; }
+
+        /* ═══════════════════════════════════════
+           DASHBOARD SHELL
+        ═══════════════════════════════════════ */
+        #dashboard { display:none; min-height:100vh; }
+
+        /* ── Sidebar ── */
+        #sidebar {
+            position:fixed; top:0; left:0; bottom:0;
+            width:var(--sidebar-w);
+            background:var(--bg-sidebar);
+            border-right:1px solid var(--border);
+            display:flex; flex-direction:column;
+            z-index:100; overflow-y:auto; overflow-x:hidden;
+            transition:transform .25s;
+        }
+        .sb-header {
+            display:flex; align-items:center; gap:10px;
+            padding:18px 16px; border-bottom:1px solid var(--border);
+            flex-shrink:0;
+        }
+        .sb-logo-mark {
+            width:30px; height:30px; border-radius:7px;
+            background:var(--accent); display:flex; align-items:center;
+            justify-content:center; font-size:13px; font-weight:800;
+            color:#fff; flex-shrink:0;
+        }
+        .sb-logo-text { font-size:15px; font-weight:700; }
+        .sb-brand-pill {
+            margin:10px; padding:10px 12px;
+            background:var(--accent-light);
+            border:1px solid rgba(27,77,153,0.28);
+            border-radius:var(--r); flex-shrink:0;
+        }
+        .sb-brand-label {
+            font-size:9px; font-weight:700; text-transform:uppercase;
+            letter-spacing:.08em; color:var(--text-muted); margin-bottom:3px;
+        }
+        .sb-brand-name { font-size:13px; font-weight:600; }
+        .sb-nav { flex:1; padding:6px; }
+        .nav-group-label {
+            font-size:9px; font-weight:700; text-transform:uppercase;
+            letter-spacing:.08em; color:var(--text-muted);
+            padding:12px 10px 5px;
+        }
+        .nav-item {
+            display:flex; align-items:center; gap:10px;
+            padding:9px 12px; border-radius:6px; cursor:pointer;
+            font-size:13px; font-weight:500; color:var(--text-secondary);
+            transition:background .12s, color .12s; margin-bottom:1px;
+            user-select:none;
+        }
+        .nav-item i { font-size:16px; width:18px; text-align:center; flex-shrink:0; }
+        .nav-item:hover  { background:var(--bg-card); color:var(--text-primary); }
+        .nav-item.active { background:var(--accent-light); color:var(--blue); }
+        .sb-footer {
+            padding:10px; border-top:1px solid var(--border); flex-shrink:0;
+        }
+        .logout-btn {
+            display:flex; align-items:center; gap:10px;
+            padding:9px 12px; border-radius:6px; cursor:pointer;
+            font-size:13px; font-weight:500; color:var(--text-muted);
+            background:none; border:none; width:100%;
+            font-family:inherit; transition:background .12s, color .12s;
+        }
+        .logout-btn i { font-size:16px; }
+        .logout-btn:hover { background:var(--red-bg); color:var(--red); }
+
+        /* ── Main ── */
+        #main { margin-left:var(--sidebar-w); display:flex; flex-direction:column; min-height:100vh; }
+        #topbar {
+            height:var(--header-h); border-bottom:1px solid var(--border);
+            display:flex; align-items:center; justify-content:space-between;
+            padding:0 26px; position:sticky; top:0;
+            background:var(--bg); z-index:50; flex-shrink:0;
+        }
+        .topbar-left { display:flex; align-items:center; gap:12px; }
+        .topbar-title { font-size:16px; font-weight:600; }
+        .topbar-badge {
+            font-size:12px; font-weight:600; color:var(--text-secondary);
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:6px; padding:4px 10px;
+        }
+        #mobile-toggle {
+            display:none; background:none; border:none;
+            color:var(--text-primary); font-size:21px; cursor:pointer;
+        }
+        #content { flex:1; padding:26px; }
+
+        /* ── Pages ── */
+        .page { display:none; }
+        .page.active { display:block; }
+        .page-header { margin-bottom:22px; }
+        .page-header h1 { font-size:21px; font-weight:700; margin-bottom:3px; }
+        .page-header p  { font-size:13px; color:var(--text-secondary); }
+
+        /* ── Stats grid ── */
+        .stats-row {
+            display:grid; grid-template-columns:repeat(4,1fr);
+            gap:14px; margin-bottom:22px;
+        }
+        .stat-card {
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--r); padding:18px 20px;
+        }
+        .stat-label {
+            display:flex; align-items:center; gap:7px;
+            font-size:11px; font-weight:600; text-transform:uppercase;
+            letter-spacing:.06em; color:var(--text-muted); margin-bottom:10px;
+        }
+        .stat-label i { font-size:14px; }
+        .stat-val  { font-size:30px; font-weight:700; line-height:1; margin-bottom:5px; }
+        .stat-sub  { font-size:12px; color:var(--text-muted); }
+
+        /* ── Table card ── */
+        .tcard {
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--r); overflow:hidden; margin-bottom:18px;
+        }
+        .tcard-head {
+            padding:14px 18px; border-bottom:1px solid var(--border);
+            display:flex; align-items:center; justify-content:space-between;
+        }
+        .tcard-head h2 { font-size:14px; font-weight:600; }
+        .tcard-head p  { font-size:12px; color:var(--text-secondary); margin-top:2px; }
+        .tscroll { overflow-x:auto; }
+        table { width:100%; border-collapse:collapse; font-size:13px; }
+        th {
+            text-align:left; padding:10px 16px;
+            font-size:10px; font-weight:700; text-transform:uppercase;
+            letter-spacing:.06em; color:var(--text-muted);
+            border-bottom:1px solid var(--border); white-space:nowrap;
+        }
+        td {
+            padding:12px 16px; border-bottom:1px solid var(--border);
+            color:var(--text-secondary); vertical-align:middle;
+        }
+        tr:last-child td { border-bottom:none; }
+        tr:hover td { background:rgba(255,255,255,0.018); }
+        td.pri { color:var(--text-primary); font-weight:500; }
+        td.mono { font-family:var(--mono); font-size:11px; }
+
+        /* ── Badges ── */
+        .badge {
+            display:inline-flex; align-items:center; gap:5px;
+            padding:3px 9px; border-radius:100px;
+            font-size:11px; font-weight:600; white-space:nowrap;
+        }
+        .dot { width:5px; height:5px; border-radius:50%; }
+        .b-green  { background:var(--green-bg);  color:var(--green);  } .b-green  .dot { background:var(--green); }
+        .b-yellow { background:var(--yellow-bg); color:var(--yellow); } .b-yellow .dot { background:var(--yellow); }
+        .b-red    { background:var(--red-bg);    color:var(--red);    } .b-red    .dot { background:var(--red); }
+        .b-blue   { background:var(--blue-bg);   color:var(--blue);   } .b-blue   .dot { background:var(--blue); }
+        .b-purple { background:var(--purple-bg); color:var(--purple); } .b-purple .dot { background:var(--purple); }
+
+        /* ── Empty state ── */
+        .empty {
+            text-align:center; padding:44px 24px; color:var(--text-muted);
+        }
+        .empty i { font-size:36px; margin-bottom:10px; display:block; }
+        .empty p  { font-size:13px; }
+
+        /* ── Alert card ── */
+        .alert-card {
+            border-radius:var(--r); overflow:hidden; margin-bottom:16px;
+        }
+        .alert-card-head {
+            padding:13px 18px;
+            display:flex; align-items:center; gap:8px;
+            font-size:13px; font-weight:600;
+        }
+        .alert-card-head p { font-size:12px; font-weight:400; opacity:.7; margin-top:1px; }
+
+        /* ── Stock bar ── */
+        .stock-wrap { display:flex; align-items:center; gap:8px; }
+        .stock-bar  { flex:1; height:3px; background:var(--border); border-radius:2px; max-width:70px; }
+        .stock-fill { height:100%; border-radius:2px; }
+
+        /* ── Marketing channel cards ── */
+        .ch-grid {
+            display:grid; grid-template-columns:repeat(4,1fr);
+            gap:13px; margin-bottom:20px;
+        }
+        .ch-card {
+            background:var(--bg-card); border:1px solid var(--border);
+            border-radius:var(--r); padding:16px;
+        }
+        .ch-name {
+            display:flex; align-items:center; gap:7px;
+            font-size:11px; font-weight:700; text-transform:uppercase;
+            letter-spacing:.06em; color:var(--text-muted); margin-bottom:14px;
+        }
+        .ch-name i { font-size:15px; }
+        .ch-spend { font-size:22px; font-weight:700; margin-bottom:2px; }
+        .ch-roas  { font-size:26px; font-weight:700; color:var(--green); margin-bottom:12px; }
+        .ch-sub   { font-size:11px; color:var(--text-muted); margin-bottom:10px; }
+        .ch-row   { display:flex; gap:14px; flex-wrap:wrap; }
+        .ch-mini-label { font-size:10px; color:var(--text-muted); margin-bottom:2px; }
+        .ch-mini-val   { font-size:13px; font-weight:600; }
+
+        /* ── Responsive ── */
+        @media (max-width:1024px) {
+            .stats-row { grid-template-columns:repeat(2,1fr); }
+            .ch-grid   { grid-template-columns:repeat(2,1fr); }
+        }
+        @media (max-width:768px) {
+            #sidebar { transform:translateX(-100%); }
+            #sidebar.open { transform:translateX(0); }
+            #main { margin-left:0; }
+            #mobile-toggle { display:block; }
+            #content { padding:16px; }
+            .stats-row { grid-template-columns:repeat(2,1fr); gap:10px; }
+            .ch-grid   { grid-template-columns:repeat(2,1fr); gap:10px; }
+        }
+        @media (max-width:400px) {
+            .stats-row { grid-template-columns:1fr 1fr; }
+            .ch-grid   { grid-template-columns:1fr 1fr; }
+        }
+
+        /* ── Sidebar overlay on mobile ── */
+        #sb-overlay {
+            display:none; position:fixed; inset:0;
+            background:rgba(0,0,0,0.5); z-index:99;
+        }
+        #sb-overlay.show { display:block; }
+
+        /* ══════════════════════════════════
+           FREIGHT — NEW COMPONENTS
+        ══════════════════════════════════ */
+        .fr-top-grid {
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:16px;
+            margin-bottom:18px;
+        }
+        @media (max-width:900px) { .fr-top-grid { grid-template-columns:1fr; } }
+
+        /* ── Quote Form ── */
+        .qform { padding:18px 20px; }
+        .qform-section { margin-bottom:18px; }
+        .qform-section-label {
+            font-size:11px; font-weight:700; text-transform:uppercase;
+            letter-spacing:.07em; color:var(--text-muted);
+            margin-bottom:10px; display:flex; align-items:center; gap:6px;
+        }
+        .qform-section-label i { font-size:13px; }
+        .qform-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        .qform-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+        .qform-field { display:flex; flex-direction:column; gap:5px; }
+        .qform-field label {
+            font-size:11px; font-weight:600; color:var(--text-muted);
+        }
+        .qform-input, .qform-select {
+            padding:9px 12px; background:rgba(255,255,255,0.04);
+            border:1px solid var(--border); border-radius:6px;
+            color:var(--text-primary); font-size:13px;
+            font-family:var(--font); outline:none;
+            transition:border-color .15s;
+        }
+        .qform-input:focus, .qform-select:focus { border-color:var(--accent); }
+        .qform-input::placeholder { color:var(--text-muted); }
+        .qform-select option { background:#0c1e32; color:var(--text-primary); }
+        .qform-divider { border:none; border-top:1px solid var(--border); margin:16px 0; }
+        .shipment-type-row { display:flex; gap:10px; }
+        .shipment-type-btn {
+            flex:1; padding:10px; border-radius:6px;
+            border:1px solid var(--border); background:var(--bg-card);
+            color:var(--text-secondary); cursor:pointer; font-family:var(--font);
+            font-size:13px; font-weight:500; text-align:center;
+            transition:all .15s; display:flex; flex-direction:column;
+            align-items:center; gap:4px;
+        }
+        .shipment-type-btn i { font-size:18px; }
+        .shipment-type-btn.selected {
+            border-color:var(--accent); background:var(--accent-light);
+            color:var(--blue);
+        }
+        .shipment-type-btn span { font-size:10px; color:var(--text-muted); }
+        .quote-btn {
+            width:100%; padding:11px; border-radius:var(--r);
+            background:var(--accent); border:none; color:#fff;
+            font-family:var(--font); font-size:14px; font-weight:600;
+            cursor:pointer; transition:opacity .15s; margin-top:4px;
+            display:flex; align-items:center; justify-content:center; gap:8px;
+        }
+        .quote-btn:hover { opacity:.85; }
+        .quote-btn:disabled { opacity:.5; cursor:not-allowed; }
+
+        /* ── Quote Result ── */
+        .quote-result {
+            display:none; margin-top:16px; padding:16px;
+            background:var(--green-bg); border:1px solid rgba(34,197,94,0.25);
+            border-radius:var(--r);
+        }
+        .quote-result.show { display:block; }
+        .quote-result-title {
+            font-size:12px; font-weight:700; text-transform:uppercase;
+            letter-spacing:.06em; color:var(--green); margin-bottom:12px;
+            display:flex; align-items:center; gap:6px;
+        }
+        .quote-result-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        .quote-result-item label { font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px; }
+        .quote-result-item span  { font-size:15px; font-weight:700; }
+
+        /* ── Consolidation Calendar ── */
+        .consol-cal-inner { padding:18px 20px; }
+        .consol-cal-legend {
+            display:flex; gap:12px; flex-wrap:wrap;
+            margin-top:14px; padding-top:12px;
+            border-top:1px solid var(--border);
+        }
+
+        /* ── Calendar cells with inline events ── */
+        .cal-day {
+            aspect-ratio: unset !important;
+            min-height: 72px !important;
+            justify-content: flex-start !important;
+            align-items: flex-start !important;
+            padding: 5px 4px 4px !important;
+            gap: 2px !important;
+            overflow: hidden;
+        }
+        .cal-day-num {
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1;
+            margin-bottom: 3px;
+            width: 100%;
+        }
+        .cal-day.today .cal-day-num { color: var(--blue); font-weight: 700; }
+        .cal-day.other .cal-day-num { opacity: .3; }
+        .cal-evt-chip {
+            font-size: 8px;
+            font-weight: 700;
+            padding: 2px 4px;
+            border-radius: 3px;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            line-height: 1.3;
+            letter-spacing: .02em;
+        }
+        /* Remove old dot positioning since we now use chips */
+        .cal-day .cal-dots { display: none !important; }
+
+        /* ══════════════════════════════════
+           OVERVIEW — BRAND PROFILE CARD
+        ══════════════════════════════════ */
+        .brand-profile-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            margin-bottom: 22px;
+            overflow: hidden;
+        }
+        .bp-top {
+            display: flex; align-items: center; gap: 18px;
+            padding: 20px 22px;
+            border-bottom: 1px solid var(--border);
+        }
+        .bp-avatar {
+            width: 52px; height: 52px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; font-weight: 800; color: #fff; flex-shrink: 0;
+        }
+        .bp-name { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+        .bp-meta {
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        }
+        .bp-tag {
+            font-size: 11px; font-weight: 600; padding: 2px 8px;
+            border-radius: 100px; border: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+        .bp-since {
+            font-size: 12px; color: var(--text-muted);
+            display: flex; align-items: center; gap: 5px; margin-top: 6px;
+        }
+        .bp-since i { font-size: 13px; }
+        .bp-tier-wrap { margin-left: auto; text-align: right; flex-shrink: 0; }
+        .bp-tier-label {
+            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .07em; color: var(--text-muted); margin-bottom: 5px;
+        }
+        .bp-tier-badge {
+            font-size: 13px; font-weight: 700; padding: 5px 14px;
+            border-radius: 100px; display: inline-block;
+        }
+        .tier-starter  { background: var(--blue-bg);   color: var(--blue);   border: 1px solid rgba(96,165,250,.3); }
+        .tier-growth   { background: var(--green-bg);  color: var(--green);  border: 1px solid rgba(34,197,94,.3); }
+        .tier-premium  { background: rgba(201,168,76,.12); color: #C9A84C;   border: 1px solid rgba(201,168,76,.3); }
+        .bp-grid {
+            display: grid; grid-template-columns: 1fr 1fr 1fr;
+            gap: 0;
+        }
+        @media (max-width: 768px) { .bp-grid { grid-template-columns: 1fr; } }
+        .bp-section {
+            padding: 16px 22px;
+            border-right: 1px solid var(--border);
+        }
+        .bp-section:last-child { border-right: none; }
+        .bp-section-title {
+            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .07em; color: var(--text-muted); margin-bottom: 12px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .bp-section-title i { font-size: 12px; }
+        .bp-poc-row {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 13px; color: var(--text-secondary); margin-bottom: 6px;
+        }
+        .bp-poc-row i { font-size: 14px; color: var(--text-muted); width: 16px; flex-shrink: 0; }
+        .bp-stat-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+        }
+        .bp-stat-row:last-child { border-bottom: none; }
+        .bp-stat-row span:first-child { color: var(--text-muted); }
+        .bp-stat-row span:last-child  { font-weight: 600; color: var(--text-primary); }
+        .bp-service-list { display: flex; flex-direction: column; gap: 6px; }
+        .bp-service-item {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 13px; color: var(--text-secondary);
+        }
+        .bp-service-item i { font-size: 14px; }
+        .bp-service-item.active { color: var(--text-primary); }
+        .bp-service-item.active i { color: var(--green); }
+
+        /* ══════════════════════════════════
+           COMPLIANCE — NEW COMPONENTS
+        ══════════════════════════════════ */
+
+        /* Top grid: POC left, Calendar right */
+        .co-top-grid {
+            display:grid;
+            grid-template-columns:300px 1fr;
+            gap:16px;
+            margin-bottom:18px;
+        }
+        @media (max-width:900px) { .co-top-grid { grid-template-columns:1fr; } }
+
+        /* ── POC Card ── */
+        .poc-inner { padding:20px; }
+        .poc-avatar-wrap { text-align:center; margin-bottom:14px; }
+        .poc-avatar {
+            width:64px; height:64px; border-radius:50%;
+            background:linear-gradient(135deg,#1b4d99,#3b82f6);
+            display:inline-flex; align-items:center; justify-content:center;
+            font-size:22px; font-weight:700; color:#fff;
+            border:2px solid rgba(96,165,250,0.3);
+        }
+        .poc-online {
+            display:inline-flex; align-items:center; gap:5px;
+            font-size:11px; color:var(--green); margin-top:6px;
+        }
+        .poc-online-dot {
+            width:7px; height:7px; border-radius:50%;
+            background:var(--green); animation:pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%,100% { opacity:1; } 50% { opacity:.4; }
+        }
+        .poc-name { font-size:15px; font-weight:700; text-align:center; margin-bottom:3px; }
+        .poc-role { font-size:12px; color:var(--text-muted); text-align:center; margin-bottom:18px; }
+        .poc-divider { border:none; border-top:1px solid var(--border); margin:0 0 16px; }
+        .poc-contacts { display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
+        .poc-contact-row {
+            display:flex; align-items:center; gap:10px;
+            font-size:13px; color:var(--text-secondary);
+        }
+        .poc-contact-row i { font-size:15px; color:var(--text-muted); width:18px; flex-shrink:0; }
+        .poc-btn {
+            display:flex; align-items:center; justify-content:center; gap:8px;
+            width:100%; padding:10px; border-radius:var(--r);
+            font-family:var(--font); font-size:13px; font-weight:600;
+            cursor:pointer; transition:opacity .15s; border:none;
+        }
+        .poc-btn-primary { background:var(--accent); color:#fff; margin-bottom:8px; }
+        .poc-btn-primary:hover { opacity:.85; }
+        .poc-btn-secondary {
+            background:var(--bg-card); color:var(--text-secondary);
+            border:1px solid var(--border) !important;
+        }
+        .poc-btn-secondary:hover { background:var(--bg-hover); }
+
+        /* ── Compliance Calendar ── */
+        .cal-inner { padding:18px 20px; }
+        .cal-nav {
+            display:flex; align-items:center; justify-content:space-between;
+            margin-bottom:16px;
+        }
+        .cal-nav-btn {
+            width:28px; height:28px; border-radius:6px;
+            background:var(--bg-card); border:1px solid var(--border);
+            color:var(--text-secondary); cursor:pointer;
+            display:flex; align-items:center; justify-content:center;
+            font-size:14px; transition:background .12s;
+        }
+        .cal-nav-btn:hover { background:var(--bg-hover); color:var(--text-primary); }
+        .cal-month { font-size:14px; font-weight:600; }
+        .cal-grid {
+            display:grid; grid-template-columns:repeat(7,1fr); gap:2px;
+        }
+        .cal-dow {
+            text-align:center; font-size:9px; font-weight:700;
+            text-transform:uppercase; letter-spacing:.05em;
+            color:var(--text-muted); padding:4px 0 8px;
+        }
+        .cal-day {
+            aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+            border-radius:5px; font-size:12px; position:relative;
+            transition:background .1s; cursor:default; flex-direction:column;
+        }
+        .cal-day.other { color:var(--text-muted); opacity:.25; }
+        .cal-day.today {
+            background:var(--accent-light);
+            border:1px solid rgba(27,77,153,.4);
+            font-weight:700; color:var(--blue);
+        }
+        .cal-day.has-event { cursor:pointer; }
+        .cal-day.has-event:hover { background:var(--bg-hover); }
+        .cal-dots {
+            display:flex; gap:2px; position:absolute; bottom:3px;
+            left:50%; transform:translateX(-50%);
+        }
+        .cal-dot { width:4px; height:4px; border-radius:50%; }
+        .cal-legend {
+            display:flex; gap:14px; flex-wrap:wrap;
+            margin-top:14px; padding-top:12px;
+            border-top:1px solid var(--border);
+        }
+        .cal-leg-item {
+            display:flex; align-items:center; gap:5px;
+            font-size:11px; color:var(--text-muted);
+        }
+        .cal-leg-dot { width:8px; height:8px; border-radius:50%; }
+        /* Tooltip */
+        .cal-tip {
+            display:none; position:absolute; bottom:calc(100% + 6px);
+            left:50%; transform:translateX(-50%);
+            background:#0c1e32; border:1px solid var(--border-strong);
+            border-radius:6px; padding:7px 10px; font-size:11px;
+            white-space:nowrap; z-index:50; min-width:170px; text-align:left;
+            pointer-events:none;
+        }
+        .cal-day:hover .cal-tip { display:block; }
+        .cal-tip-row { margin-bottom:3px; display:flex; align-items:center; gap:5px; }
+        .cal-tip-row:last-child { margin-bottom:0; }
+
+        /* ── Document Upload ── */
+        .upload-inner { padding:20px; }
+        .upload-zone {
+            border:2px dashed var(--border-strong); border-radius:var(--r);
+            padding:28px 20px; text-align:center; cursor:pointer;
+            transition:border-color .15s, background .15s; margin-bottom:18px;
+        }
+        .upload-zone:hover, .upload-zone.drag-over {
+            border-color:var(--accent); background:var(--accent-light);
+        }
+        .upload-zone i { font-size:32px; color:var(--text-muted); display:block; margin-bottom:10px; }
+        .upload-zone p { font-size:14px; font-weight:600; margin-bottom:4px; }
+        .upload-zone span { font-size:12px; color:var(--text-muted); }
+        .upload-browse {
+            display:inline-block; margin-top:12px; padding:7px 16px;
+            background:var(--bg-card); border:1px solid var(--border-strong);
+            border-radius:6px; font-size:13px; font-weight:600;
+            color:var(--text-primary); cursor:pointer; transition:background .12s;
+            font-family:var(--font);
+        }
+        .upload-browse:hover { background:var(--bg-hover); }
+        .demo-banner {
+            display:flex; align-items:center; gap:8px;
+            padding:9px 12px; border-radius:6px; margin-bottom:14px;
+            background:rgba(201,168,76,0.08); border:1px solid rgba(201,168,76,0.22);
+            font-size:12px; color:#C9A84C;
+        }
+        .demo-banner i { font-size:14px; flex-shrink:0; }
+        .upload-list { display:flex; flex-direction:column; gap:8px; }
+        .upload-item {
+            display:flex; align-items:center; gap:12px;
+            padding:10px 12px; background:var(--bg-card);
+            border:1px solid var(--border); border-radius:6px;
+        }
+        .upload-icon {
+            width:34px; height:34px; border-radius:7px; flex-shrink:0;
+            display:flex; align-items:center; justify-content:center; font-size:16px;
+        }
+        .upload-doc-name { font-size:13px; font-weight:500; margin-bottom:2px; }
+        .upload-doc-meta { font-size:11px; color:var(--text-muted); }
+        .upload-item-badge { margin-left:auto; flex-shrink:0; }
+    </style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading-overlay">
+    <div class="spinner"></div>
+    <p id="loading-msg">Connecting to Google Sheets…</p>
+</div>
+
+<!-- Sidebar overlay (mobile) -->
+<div id="sb-overlay" onclick="closeSidebar()"></div>
+
+<!-- ══════════════════════════════════════
+     LOGIN
+══════════════════════════════════════ -->
+<div id="login-screen">
+    <div class="login-box">
+        <div class="login-logo">
+            <div class="logo-mark">W</div>
+            <span class="logo-text">Wescayl</span>
+        </div>
+        <h1 class="login-title">Client Portal</h1>
+        <p class="login-sub">Select your brand to access your dashboard</p>
+        <div id="brand-list" class="brand-list">
+            <div style="display:flex;justify-content:center;padding:24px">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     DASHBOARD
+══════════════════════════════════════ -->
+<div id="dashboard">
+
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <div class="sb-header">
+            <div class="sb-logo-mark">W</div>
+            <span class="sb-logo-text">Wescayl</span>
+        </div>
+        <div class="sb-brand-pill">
+            <div class="sb-brand-label">Logged in as</div>
+            <div class="sb-brand-name" id="sb-brand-name">—</div>
+        </div>
+        <nav class="sb-nav">
+            <div class="nav-group-label">Dashboard</div>
+            <div class="nav-item active" data-page="overview">
+                <i class="ph ph-squares-four"></i> Overview
+            </div>
+            <div class="nav-group-label">Services</div>
+            <div class="nav-item" data-page="compliance">
+                <i class="ph ph-shield-check"></i> Compliance
+            </div>
+            <div class="nav-item" data-page="freight">
+                <i class="ph ph-boat"></i> Freight
+            </div>
+            <div class="nav-item" data-page="inventory">
+                <i class="ph ph-warehouse"></i> Inventory
+            </div>
+            <div class="nav-item" data-page="orders">
+                <i class="ph ph-package"></i> Orders
+            </div>
+            <div class="nav-item" data-page="returns">
+                <i class="ph ph-arrows-clockwise"></i> Returns
+            </div>
+            <div class="nav-item" data-page="marketing">
+                <i class="ph ph-chart-line-up"></i> Marketing
+            </div>
+        </nav>
+        <div class="sb-footer">
+            <button class="logout-btn" onclick="logout()">
+                <i class="ph ph-sign-out"></i> Switch brand
+            </button>
+        </div>
+    </div>
+
+    <!-- Main -->
+    <div id="main">
+        <div id="topbar">
+            <div class="topbar-left">
+                <button id="mobile-toggle" onclick="openSidebar()">
+                    <i class="ph ph-list"></i>
+                </button>
+                <span class="topbar-title" id="topbar-title">Overview</span>
+            </div>
+            <span class="topbar-badge" id="topbar-brand">—</span>
+        </div>
+
+        <div id="content">
+
+            <!-- ── Overview ── -->
+            <div class="page active" id="page-overview">
+                <div class="page-header">
+                    <h1 id="ov-greeting">Good day</h1>
+                    <p>Here's a summary of your brand across all services</p>
+                </div>
+                <div id="ov-profile"></div>
+                <div class="stats-row" id="ov-stats"></div>
+                <div id="ov-alerts"></div>
+            </div>
+
+            <!-- ── Compliance ── -->
+            <div class="page" id="page-compliance">
+                <div class="page-header">
+                    <h1>Compliance & Audit</h1>
+                    <p>Regulatory documents, certifications and their current status</p>
+                </div>
+
+                <!-- Stat cards -->
+                <div class="stats-row" id="co-stats"></div>
+
+                <!-- POC + Calendar row -->
+                <div class="co-top-grid">
+
+                    <!-- POC Card -->
+                    <div class="tcard">
+                        <div class="tcard-head">
+                            <div><h2>Your Compliance Consultant</h2><p>Dedicated point of contact</p></div>
+                        </div>
+                        <div class="poc-inner" id="co-poc"></div>
+                    </div>
+
+                    <!-- Calendar -->
+                    <div class="tcard">
+                        <div class="tcard-head">
+                            <div><h2>Compliance Calendar</h2><p>Key dates — submissions, approvals &amp; expiries</p></div>
+                        </div>
+                        <div class="cal-inner">
+                            <div class="cal-nav">
+                                <button class="cal-nav-btn" id="cal-prev"><i class="ph ph-caret-left"></i></button>
+                                <span class="cal-month" id="cal-label"></span>
+                                <button class="cal-nav-btn" id="cal-next"><i class="ph ph-caret-right"></i></button>
+                            </div>
+                            <div class="cal-grid" id="cal-grid"></div>
+                            <div class="cal-legend">
+                                <div class="cal-leg-item"><div class="cal-leg-dot" style="background:var(--blue)"></div>Submitted</div>
+                                <div class="cal-leg-item"><div class="cal-leg-dot" style="background:var(--green)"></div>Approved</div>
+                                <div class="cal-leg-item"><div class="cal-leg-dot" style="background:var(--red)"></div>Expiry</div>
+                                <div class="cal-leg-item"><div class="cal-leg-dot" style="background:var(--yellow)"></div>Action Required</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Document Upload -->
+                <div class="tcard" style="margin-bottom:18px">
+                    <div class="tcard-head">
+                        <div><h2>Document Upload</h2><p>Submit compliance documents to your consultant</p></div>
+                    </div>
+                    <div class="upload-inner">
+                        <div class="demo-banner">
+                            <i class="ph ph-info"></i>
+                            Demo mode — uploads are not stored. In the live version documents go directly to your consultant.
+                        </div>
+                        <div class="upload-zone" id="upload-zone"
+                             ondragover="event.preventDefault();this.classList.add('drag-over')"
+                             ondragleave="this.classList.remove('drag-over')"
+                             ondrop="handleDrop(event)">
+                            <i class="ph ph-cloud-arrow-up"></i>
+                            <p>Drag & drop your documents here</p>
+                            <span>PDF, JPG, PNG — max 20MB per file</span>
+                            <br>
+                            <button class="upload-browse" onclick="document.getElementById('file-input').click()">
+                                Browse files
+                            </button>
+                            <input type="file" id="file-input" multiple style="display:none"
+                                   onchange="handleFileSelect(this.files)">
+                        </div>
+                        <div class="upload-list" id="upload-list"></div>
+                    </div>
+                </div>
+
+                <!-- Documents Table -->
+                <div class="tcard">
+                    <div class="tcard-head">
+                        <div><h2>All Documents</h2><p>Full certification checklist</p></div>
+                    </div>
+                    <div class="tscroll">
+                        <table>
+                            <thead><tr>
+                                <th>Document</th><th>Status</th>
+                                <th>Submitted</th><th>Approved</th>
+                                <th>Expiry</th><th>Notes</th>
+                            </tr></thead>
+                            <tbody id="co-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Freight ── -->
+            <div class="page" id="page-freight">
+                <div class="page-header">
+                    <h1>Freight & Shipments</h1>
+                    <p>LCL consolidation shipments from India to the UK</p>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats-row" id="fr-stats"></div>
+
+                <!-- Quote form + Consolidation calendar -->
+                <div class="fr-top-grid">
+
+                    <!-- Quote Form -->
+                    <div class="tcard">
+                        <div class="tcard-head">
+                            <div><h2>Get a Freight Quotation</h2><p>Fill in your shipment details for a cost estimate</p></div>
+                        </div>
+                        <div class="qform">
+                            <!-- 1. Collection -->
+                            <div class="qform-section">
+                                <div class="qform-section-label"><i class="ph ph-map-pin"></i> 1. Collection Address</div>
+                                <div class="qform-row" style="margin-bottom:8px">
+                                    <div class="qform-field" style="grid-column:span 2">
+                                        <label>Street / Area</label>
+                                        <input class="qform-input" id="q-col-street" placeholder="e.g. Andheri Industrial Estate">
+                                    </div>
+                                </div>
+                                <div class="qform-row-3">
+                                    <div class="qform-field">
+                                        <label>City</label>
+                                        <input class="qform-input" id="q-col-city" placeholder="Mumbai">
+                                    </div>
+                                    <div class="qform-field">
+                                        <label>Postcode / PIN</label>
+                                        <input class="qform-input" id="q-col-pin" placeholder="400053">
+                                    </div>
+                                    <div class="qform-field">
+                                        <label>Country</label>
+                                        <select class="qform-select" id="q-col-country">
+                                            <option value="India" selected>India</option>
+                                            <option value="UK">UK</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="qform-divider">
+
+                            <!-- 2. Delivery -->
+                            <div class="qform-section">
+                                <div class="qform-section-label"><i class="ph ph-navigation-arrow"></i> 2. Delivery Address</div>
+                                <div class="qform-row" style="margin-bottom:8px">
+                                    <div class="qform-field" style="grid-column:span 2">
+                                        <label>Street / Area</label>
+                                        <input class="qform-input" id="q-del-street" placeholder="e.g. Wescayl UK Warehouse">
+                                    </div>
+                                </div>
+                                <div class="qform-row-3">
+                                    <div class="qform-field">
+                                        <label>City</label>
+                                        <input class="qform-input" id="q-del-city" placeholder="Felixstowe" value="Felixstowe">
+                                    </div>
+                                    <div class="qform-field">
+                                        <label>Postcode</label>
+                                        <input class="qform-input" id="q-del-post" placeholder="IP11 3SY" value="IP11 3SY">
+                                    </div>
+                                    <div class="qform-field">
+                                        <label>Country</label>
+                                        <select class="qform-select" id="q-del-country">
+                                            <option value="UK" selected>UK</option>
+                                            <option value="India">India</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="qform-divider">
+
+                            <!-- 3. Cargo -->
+                            <div class="qform-section">
+                                <div class="qform-section-label"><i class="ph ph-cube"></i> 3. Cargo Details</div>
+                                <div class="qform-row-3">
+                                    <div class="qform-field">
+                                        <label>Total Weight (kg)</label>
+                                        <input class="qform-input" id="q-weight" type="number" placeholder="500">
+                                    </div>
+                                    <div class="qform-field">
+                                        <label>Dimensions (W×H×L cm)</label>
+                                        <input class="qform-input" id="q-dims" placeholder="120×100×80">
+                                    </div>
+                                    <div class="qform-field">
+                                        <label>No. of Pallets</label>
+                                        <input class="qform-input" id="q-pallets" type="number" placeholder="2">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="qform-divider">
+
+                            <!-- 4. Shipment type -->
+                            <div class="qform-section" style="margin-bottom:14px">
+                                <div class="qform-section-label"><i class="ph ph-truck"></i> 4. Shipment Type</div>
+                                <div class="shipment-type-row">
+                                    <button class="shipment-type-btn selected" id="type-lcl" onclick="selectShipType('lcl')">
+                                        <i class="ph ph-boat"></i>
+                                        LCL (Shared)
+                                        <span>Our consolidation — best rate</span>
+                                    </button>
+                                    <button class="shipment-type-btn" id="type-fcl" onclick="selectShipType('fcl')">
+                                        <i class="ph ph-cube"></i>
+                                        FCL (Full Container)
+                                        <span>Your own container</span>
+                                    </button>
+                                    <button class="shipment-type-btn" id="type-air" onclick="selectShipType('air')">
+                                        <i class="ph ph-airplane-takeoff"></i>
+                                        Air Freight
+                                        <span>Fastest, higher cost</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button class="quote-btn" onclick="calculateQuote()">
+                                <i class="ph ph-calculator"></i> Get Quotation
+                            </button>
+
+                            <!-- Result -->
+                            <div class="quote-result" id="quote-result">
+                                <div class="quote-result-title"><i class="ph ph-check-circle"></i> Estimated Quote</div>
+                                <div class="quote-result-grid" id="quote-result-grid"></div>
+                                <p style="font-size:11px;color:var(--text-muted);margin-top:12px">
+                                    <i class="ph ph-info" style="vertical-align:middle"></i>
+                                    This is a demo estimate. Your Wescayl contact will confirm the exact rate.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Consolidation Calendar -->
+                    <div class="tcard">
+                        <div class="tcard-head">
+                            <div><h2>Our Consolidation Schedule</h2><p>Book slots to join our next LCL consolidation and save more</p></div>
+                        </div>
+                        <div class="consol-cal-inner">
+                            <div class="cal-nav">
+                                <button class="cal-nav-btn" id="ccal-prev"><i class="ph ph-caret-left"></i></button>
+                                <span class="cal-month" id="ccal-label"></span>
+                                <button class="cal-nav-btn" id="ccal-next"><i class="ph ph-caret-right"></i></button>
+                            </div>
+                            <div class="cal-grid" id="ccal-grid"></div>
+                            <div class="consol-cal-legend">
+                                <div class="cal-leg-item"><div class="cal-leg-dot" style="background:var(--red)"></div>Cutoff</div>
+                                <div class="cal-leg-item"><div class="cal-leg-dot" style="background:var(--accent)"></div>Consolidation</div>
+                                <div class="cal-leg-item"><div class="cal-leg-dot" style="background:var(--green)"></div>Departure</div>
+                                <div class="cal-leg-item"><div class="cal-leg-dot" style="background:var(--purple)"></div>ETA UK</div>
+                            </div>
+                            <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+                                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:10px">Upcoming Events</div>
+                                <div id="ccal-upcoming"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shipments table -->
+                <div class="tcard">
+                    <div class="tcard-head">
+                        <div><h2>Your Shipments</h2><p>Live status of your freight consignments</p></div>
+                    </div>
+                    <div class="tscroll">
+                        <table>
+                            <thead><tr>
+                                <th>Shipment ID</th><th>Origin</th>
+                                <th>Departure</th><th>ETA UK</th>
+                                <th>Port</th><th>Carrier</th>
+                                <th>CBM</th><th>Status</th>
+                            </tr></thead>
+                            <tbody id="fr-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Inventory ── -->
+            <div class="page" id="page-inventory">
+                <div class="page-header">
+                    <h1>Inventory</h1>
+                    <p>Stock levels in your UK warehouse and in transit</p>
+                </div>
+                <div class="stats-row" id="inv-stats"></div>
+                <div class="tcard">
+                    <div class="tcard-head">
+                        <div><h2>Stock Levels</h2><p>Per-SKU breakdown across warehouse and transit</p></div>
+                    </div>
+                    <div class="tscroll">
+                        <table>
+                            <thead><tr>
+                                <th>SKU</th><th>Product</th>
+                                <th>Warehouse</th><th>In Transit</th>
+                                <th>Reorder Level</th><th>Total</th>
+                                <th>Status</th><th>Last Updated</th>
+                            </tr></thead>
+                            <tbody id="inv-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Orders ── -->
+            <div class="page" id="page-orders">
+                <div class="page-header">
+                    <h1>Orders</h1>
+                    <p>Customer orders across all UK sales channels</p>
+                </div>
+                <div class="stats-row" id="ord-stats"></div>
+                <div class="tcard">
+                    <div class="tcard-head">
+                        <div><h2>All Orders</h2><p>Pick, pack and dispatch status</p></div>
+                    </div>
+                    <div class="tscroll">
+                        <table>
+                            <thead><tr>
+                                <th>Order ID</th><th>Channel</th>
+                                <th>Order Date</th><th>Dispatch Date</th>
+                                <th>Carrier</th><th>Tracking</th><th>Status</th>
+                            </tr></thead>
+                            <tbody id="ord-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Returns ── -->
+            <div class="page" id="page-returns">
+                <div class="page-header">
+                    <h1>Returns Management</h1>
+                    <p>Returned stock inspection, grading and recovery</p>
+                </div>
+                <div class="stats-row" id="ret-stats"></div>
+                <div class="tcard">
+                    <div class="tcard-head">
+                        <div><h2>All Returns</h2><p>Items received, inspected and processed</p></div>
+                    </div>
+                    <div class="tscroll">
+                        <table>
+                            <thead><tr>
+                                <th>Return ID</th><th>Order ID</th>
+                                <th>Received</th><th>Condition</th>
+                                <th>Restocked</th><th>Notes</th>
+                            </tr></thead>
+                            <tbody id="ret-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Marketing ── -->
+            <div class="page" id="page-marketing">
+                <div class="page-header">
+                    <h1>Marketing Analytics</h1>
+                    <p>Paid campaign performance across all UK channels</p>
+                </div>
+                <div class="stats-row" id="mkt-stats"></div>
+                <div class="ch-grid" id="ch-cards"></div>
+                <div class="tcard">
+                    <div class="tcard-head">
+                        <div><h2>Channel Breakdown</h2><p>Detailed metrics per channel</p></div>
+                    </div>
+                    <div class="tscroll">
+                        <table>
+                            <thead><tr>
+                                <th>Channel</th><th>Month</th>
+                                <th>Spend (£)</th><th>Impressions</th>
+                                <th>Clicks</th><th>Orders</th>
+                                <th>Revenue (£)</th><th>ROAS</th>
+                            </tr></thead>
+                            <tbody id="mkt-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /content -->
+    </div><!-- /main -->
+</div><!-- /dashboard -->
+
+<script>
+/* ═══════════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════════ */
+const SHEET_ID = '1Q5Mhi3hUUgFrihmquzgczEoYOfv0lcwAk_IpycgmMgg';
+const API_KEY  = 'AIzaSyCqxAw9F7INKg7KHu9w-MjzypmiGVFKJ4g';
+const BASE_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values`;
+
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+let brand = null;
+let D = {};   // all fetched data
+
+/* ═══════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════ */
+async function fetchTab(tab) {
+    // 10-second timeout per tab
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    try {
+        const r = await fetch(
+            `${BASE_URL}/${encodeURIComponent(tab)}!A:Z?key=${API_KEY}`,
+            { signal: controller.signal }
+        );
+        clearTimeout(timer);
+        const j = await r.json();
+        if (j.error) {
+            console.warn(`Tab "${tab}" error:`, j.error.message);
+            return [];
+        }
+        if (!j.values || j.values.length < 2) return [];
+        const [hdrs, ...rows] = j.values;
+        return rows.map(row => Object.fromEntries(hdrs.map((h,i) => [h.trim(), (row[i]||'').trim()])));
+    } catch(e) {
+        clearTimeout(timer);
+        console.warn(`Tab "${tab}" failed:`, e.message);
+        return [];
+    }
+}
+
+const mine = rows => rows.filter(r => r.BrandName === brand.BrandName);
+const n    = v => Number(v) || 0;
+const fmt  = v => Number(v).toLocaleString();
+const gbp  = v => '£' + Number(v).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0});
+
+function badge(status) {
+    if (!status) return `<span class="badge b-blue"><span class="dot"></span>—</span>`;
+    const s = status.toLowerCase();
+    let cls = 'b-blue';
+    if (['approved','delivered','yes','resaleable','ok'].includes(s)) cls = 'b-green';
+    else if (['pending','processing','pending booking','repackageable'].includes(s)) cls = 'b-yellow';
+    else if (['action required','written off','no','out of stock'].includes(s)) cls = 'b-red';
+    else if (['in transit','dispatched','booking confirmed','in review','low stock'].includes(s)) cls = 'b-blue';
+    else if (['customs clearance'].includes(s)) cls = 'b-purple';
+    return `<span class="badge ${cls}"><span class="dot"></span>${status}</span>`;
+}
+
+function statCard(icon, iconColor, label, val, valColor, sub) {
+    return `<div class="stat-card">
+        <div class="stat-label" style="${iconColor?`color:${iconColor}`:''}">
+            <i class="ph ${icon}"></i>${label}
+        </div>
+        <div class="stat-val" style="${valColor?`color:${valColor}`:''}'">${val}</div>
+        <div class="stat-sub">${sub}</div>
+    </div>`;
+}
+
+function emptyRow(cols, icon, msg) {
+    return `<tr><td colspan="${cols}"><div class="empty"><i class="ph ${icon}"></i><p>${msg}</p></div></td></tr>`;
+}
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+async function init() {
+    const overlay = document.getElementById('loading-overlay');
+    const msg     = document.getElementById('loading-msg');
+
+    function setMsg(text, sub) {
+        msg.textContent = text;
+        let sub_el = document.getElementById('loading-sub');
+        if (!sub_el) {
+            sub_el = document.createElement('p');
+            sub_el.id = 'loading-sub';
+            sub_el.style.cssText = 'color:var(--text-muted);font-size:11px;margin-top:4px;max-width:320px;text-align:center';
+            overlay.appendChild(sub_el);
+        }
+        sub_el.textContent = sub || '';
+    }
+
+    function showError(title, detail, steps) {
+        overlay.innerHTML = `
+            <i class="ph ph-warning" style="font-size:44px;color:var(--red);margin-bottom:4px"></i>
+            <p style="color:var(--red);font-weight:700;font-size:15px">${title}</p>
+            <p style="color:var(--text-muted);font-size:12px;max-width:380px;text-align:center;margin-top:6px">${detail}</p>
+            ${steps ? `<div style="margin-top:16px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:14px 18px;max-width:380px;text-align:left">
+                <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:10px">Try these fixes</p>
+                ${steps.map(s=>`<p style="font-size:12px;color:var(--text-secondary);margin-bottom:6px">→ ${s}</p>`).join('')}
+            </div>` : ''}
+            <button onclick="location.reload()" style="margin-top:16px;padding:9px 20px;background:var(--accent);border:none;border-radius:6px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font)">
+                Retry
+            </button>`;
+    }
+
+    try {
+        setMsg('Connecting to Google Sheets…', 'Fetching Brands tab');
+        // Test the Brands tab first — fast fail with a clear error
+        const testResult = await fetchTab('Brands');
+
+        if (!testResult.length) {
+            // Try to get a raw response to understand why
+            let rawError = 'Unknown';
+            try {
+                const r = await fetch(`${BASE_URL}/Brands!A:Z?key=${API_KEY}`);
+                const j = await r.json();
+                rawError = j.error ? `API says: "${j.error.message}"` : 'Sheet returned no data';
+            } catch(e) { rawError = e.message; }
+
+            showError(
+                'Could not load sheet data',
+                rawError,
+                [
+                    'Open your Google Sheet → Share → Change to "Anyone with the link" → Viewer',
+                    'In Google Cloud Console, make sure the Google Sheets API is enabled for your project',
+                    'Check the API key has no HTTP referrer restrictions that block local files',
+                    'Try opening the portal from Vercel (not directly from your Desktop)'
+                ]
+            );
+            return;
+        }
+
+        // Load remaining tabs in parallel
+        const tabs = ['Compliance','Freight','Inventory','Orders','Returns','Marketing','Contacts','ConsolSchedule'];
+        setMsg('Loading your data…', `Loading ${tabs.length} service tabs`);
+        const results = await Promise.allSettled(tabs.map(t => fetchTab(t)));
+        const vals    = results.map(r => r.status === 'fulfilled' ? r.value : []);
+
+        D = {
+            brands:     testResult,
+            compliance: vals[0], freight:   vals[1],
+            inventory:  vals[2], orders:    vals[3],
+            returns:    vals[4], marketing: vals[5],
+            contacts:   vals[6], consol:    vals[7]
+        };
+
+        overlay.style.display = 'none';
+        renderLoginScreen();
+
+    } catch(e) {
+        showError('Unexpected error', e.message, [
+            'Open browser console (F12) and check for red errors',
+            'Make sure you are connected to the internet',
+            'Try refreshing the page'
+        ]);
+    }
+}
+
+/* ═══════════════════════════════════════════
+   LOGIN
+═══════════════════════════════════════════ */
+function renderLoginScreen() {
+    document.getElementById('login-screen').style.display = 'flex';
+    const PALETTES = ['#1b4d99','#7c3aed','#0e7490','#065f46','#9a3412','#1e40af'];
+    const list = document.getElementById('brand-list');
+    list.innerHTML = '';
+    D.brands.forEach((b, i) => {
+        const initials = b.BrandName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+        const card = document.createElement('div');
+        card.className = 'brand-card';
+        card.innerHTML = `
+            <div class="brand-avatar" style="background:${PALETTES[i%PALETTES.length]}">${initials}</div>
+            <div class="brand-card-info">
+                <h3>${b.BrandName}</h3>
+                <p>${b.Category} · <span style="color:var(--green)">${b.Status}</span></p>
+            </div>
+            <i class="ph ph-arrow-right brand-card-arrow"></i>`;
+        card.onclick = () => enterDashboard(b);
+        list.appendChild(card);
+    });
+}
+
+function enterDashboard(b) {
+    brand = b;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('sb-brand-name').textContent = b.BrandName;
+    document.getElementById('topbar-brand').textContent = b.BrandName;
+
+    const h = new Date().getHours();
+    const greet = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+    document.getElementById('ov-greeting').textContent = `${greet}, ${b.BrandName.split(' ')[0]} 👋`;
+
+    goTo('overview');
+}
+
+function logout() {
+    brand = null;
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    closeSidebar();
+}
+
+/* ═══════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════ */
+const PAGE_TITLES = {
+    overview:   'Overview',
+    compliance: 'Compliance & Audit',
+    freight:    'Freight & Shipments',
+    inventory:  'Inventory',
+    orders:     'Orders',
+    returns:    'Returns Management',
+    marketing:  'Marketing Analytics'
+};
+
+function goTo(page) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById(`page-${page}`).classList.add('active');
+    document.querySelector(`[data-page="${page}"]`).classList.add('active');
+    document.getElementById('topbar-title').textContent = PAGE_TITLES[page];
+    closeSidebar();
+    const renders = {
+        overview:   renderOverview,
+        compliance: renderCompliance,
+        freight:    renderFreight,
+        inventory:  renderInventory,
+        orders:     renderOrders,
+        returns:    renderReturns,
+        marketing:  renderMarketing
+    };
+    if (renders[page]) renders[page]();
+}
+
+document.querySelectorAll('.nav-item').forEach(el => {
+    el.addEventListener('click', () => goTo(el.dataset.page));
+});
+
+function openSidebar()  {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sb-overlay').classList.add('show');
+}
+function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sb-overlay').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════
+   OVERVIEW
+═══════════════════════════════════════════ */
+function renderOverview() {
+    const C = mine(D.compliance);
+    const F = mine(D.freight);
+    const I = mine(D.inventory);
+    const O = mine(D.orders);
+    const R = mine(D.returns);
+    const M = mine(D.marketing);
+
+    /* ── Brand Profile Card ── */
+    const PALETTES = ['#1b4d99','#7c3aed','#0e7490','#065f46','#9a3412','#1e40af'];
+    const brandIdx = D.brands.findIndex(b => b.BrandName === brand.BrandName);
+    const avatarColor = PALETTES[brandIdx % PALETTES.length];
+    const initials = brand.BrandName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+
+    // Tier: count services with data
+    const activeServices = [C.length, F.length, I.length, O.length, R.length, M.length].filter(v => v > 0).length;
+    const tier     = activeServices >= 5 ? 'Premium' : activeServices >= 3 ? 'Growth' : 'Starter';
+    const tierCls  = tier === 'Premium' ? 'tier-premium' : tier === 'Growth' ? 'tier-growth' : 'tier-starter';
+    const tierIcon = tier === 'Premium' ? 'ph-star' : tier === 'Growth' ? 'ph-trend-up' : 'ph-rocket-launch';
+
+    // Stats for profile
+    const itemsShipped  = O.filter(r => ['Delivered','Dispatched','In Transit'].includes(r.Status)).length;
+    const warehouseUnits = I.reduce((s,r) => s+n(r.StockWarehouse), 0);
+    const totalSpend    = M.reduce((s,r) => s+n(r.Spend), 0);
+
+    // Services list
+    const services = [
+        { key:'compliance', label:'Compliance & Audit',    icon:'ph-shield-check', has: C.length > 0 },
+        { key:'freight',    label:'Freight Forwarding',    icon:'ph-boat',         has: F.length > 0 },
+        { key:'inventory',  label:'3PL Fulfilment',        icon:'ph-warehouse',    has: I.length > 0 },
+        { key:'orders',     label:'Order Management',      icon:'ph-package',      has: O.length > 0 },
+        { key:'returns',    label:'Returns Management',    icon:'ph-arrows-clockwise', has: R.length > 0 },
+        { key:'marketing',  label:'Marketing Analytics',   icon:'ph-chart-line-up',has: M.length > 0 },
+    ];
+
+    document.getElementById('ov-profile').innerHTML = `
+        <div class="brand-profile-card">
+            <div class="bp-top">
+                <div class="bp-avatar" style="background:${avatarColor}">${initials}</div>
+                <div>
+                    <div class="bp-name">${brand.BrandName}</div>
+                    <div class="bp-meta">
+                        <span class="bp-tag">${brand.Category || 'Consumer Goods'}</span>
+                        <span class="badge ${brand.Status==='Active'?'b-green':'b-yellow'}">
+                            <span class="dot"></span>${brand.Status || 'Active'}
+                        </span>
+                    </div>
+                    <div class="bp-since">
+                        <i class="ph ph-calendar-blank"></i>
+                        Member since ${brand.OnboardDate || '2025'}
+                    </div>
+                </div>
+                <div class="bp-tier-wrap">
+                    <div class="bp-tier-label">Service Tier</div>
+                    <div class="bp-tier-badge ${tierCls}">
+                        <i class="ph ${tierIcon}" style="margin-right:5px"></i>${tier}
+                    </div>
+                    <div style="font-size:10px;color:var(--text-muted);margin-top:5px">${activeServices} of 6 services active</div>
+                </div>
+            </div>
+            <div class="bp-grid">
+                <div class="bp-section">
+                    <div class="bp-section-title"><i class="ph ph-user"></i> Brand POC</div>
+                    <div class="bp-poc-row"><i class="ph ph-user-circle"></i>${brand.ContactName || '—'}</div>
+                    <div class="bp-poc-row"><i class="ph ph-envelope"></i>${brand.Email || '—'}</div>
+                    <div class="bp-poc-row"><i class="ph ph-map-pin"></i>${brand.Category || '—'} · India → UK</div>
+                </div>
+                <div class="bp-section">
+                    <div class="bp-section-title"><i class="ph ph-chart-bar"></i> Key Numbers</div>
+                    <div class="bp-stat-row"><span>Orders shipped</span><span>${itemsShipped}</span></div>
+                    <div class="bp-stat-row"><span>Units in warehouse</span><span>${fmt(warehouseUnits)}</span></div>
+                    <div class="bp-stat-row"><span>Active shipments</span><span>${F.filter(r=>r.Status!=='Delivered').length}</span></div>
+                    <div class="bp-stat-row"><span>Ad spend (this month)</span><span>${totalSpend ? gbp(totalSpend) : '—'}</span></div>
+                </div>
+                <div class="bp-section">
+                    <div class="bp-section-title"><i class="ph ph-check-square"></i> Active Services</div>
+                    <div class="bp-service-list">
+                        ${services.map(s => `
+                            <div class="bp-service-item ${s.has?'active':''}">
+                                <i class="ph ${s.has ? 'ph-check-circle' : 'ph-circle'} ${s.has?'':''}"></i>
+                                <i class="ph ${s.icon}"></i>
+                                ${s.label}
+                            </div>`).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+
+    const actionReq    = C.filter(r => r.Status === 'Action Required').length;
+    const activeShips  = F.filter(r => ['In Transit','Customs Clearance','Booking Confirmed'].includes(r.Status)).length;
+    const outOfStock   = I.filter(r => n(r.StockWarehouse) === 0).length;
+    const lowStock     = I.filter(r => n(r.StockWarehouse) > 0 && n(r.StockWarehouse) <= n(r.ReorderLevel)).length;
+    const totalRevenue = M.reduce((s,r) => s+n(r.Revenue), 0);
+    const roas         = totalSpend > 0 ? (totalRevenue/totalSpend).toFixed(2) : '—';
+
+    document.getElementById('ov-stats').innerHTML =
+        statCard('ph-boat','','Active Shipments', activeShips, '', `${F.length} total consignments`) +
+        statCard('ph-shield-warning', actionReq > 0 ? 'var(--red)':'',
+            'Compliance Alerts', actionReq, actionReq > 0 ? 'var(--red)':'var(--green)',
+            `${C.length} documents tracked`) +
+        statCard('ph-warning', (outOfStock+lowStock) > 0 ? 'var(--yellow)':'',
+            'Stock Alerts', outOfStock+lowStock, outOfStock > 0 ? 'var(--red)': lowStock > 0 ? 'var(--yellow)':'var(--green)',
+            `${outOfStock} out of stock · ${lowStock} low`) +
+        statCard('ph-chart-line-up','','Overall ROAS',
+            roas !== '—' ? roas+'x' : '—', 'var(--green)',
+            `${gbp(totalSpend)} spend · ${gbp(totalRevenue)} revenue`);
+
+    let alerts = '';
+
+    if (actionReq > 0) {
+        const items = C.filter(r => r.Status === 'Action Required');
+        alerts += `<div class="tcard" style="border-color:rgba(239,68,68,0.35)">
+            <div class="tcard-head" style="background:rgba(239,68,68,0.07)">
+                <div>
+                    <h2 style="color:var(--red);display:flex;align-items:center;gap:6px">
+                        <i class="ph ph-warning"></i> Compliance — Action Required
+                    </h2>
+                    <p>These documents need your attention</p>
+                </div>
+            </div>
+            <div class="tscroll"><table>
+                <thead><tr><th>Document</th><th>Notes</th><th>Status</th></tr></thead>
+                <tbody>${items.map(r=>`<tr>
+                    <td class="pri">${r.Document}</td>
+                    <td>${r.Notes||'—'}</td>
+                    <td>${badge(r.Status)}</td>
+                </tr>`).join('')}</tbody>
+            </table></div></div>`;
+    }
+
+    if (outOfStock > 0) {
+        const items = I.filter(r => n(r.StockWarehouse) === 0);
+        alerts += `<div class="tcard" style="border-color:rgba(251,191,36,0.35)">
+            <div class="tcard-head" style="background:rgba(251,191,36,0.07)">
+                <div>
+                    <h2 style="color:var(--yellow);display:flex;align-items:center;gap:6px">
+                        <i class="ph ph-package"></i> Inventory — Out of Stock
+                    </h2>
+                    <p>These SKUs have no stock in the UK warehouse</p>
+                </div>
+            </div>
+            <div class="tscroll"><table>
+                <thead><tr><th>SKU</th><th>Product</th><th>In Transit</th></tr></thead>
+                <tbody>${items.map(r=>`<tr>
+                    <td class="mono">${r.SKU}</td>
+                    <td class="pri">${r.ProductName}</td>
+                    <td>${n(r.StockInTransit)>0
+                        ? `<span class="badge b-blue"><span class="dot"></span>${r.StockInTransit} incoming</span>`
+                        : `<span class="badge b-red"><span class="dot"></span>None</span>`}</td>
+                </tr>`).join('')}</tbody>
+            </table></div></div>`;
+    }
+
+    if (!alerts) {
+        alerts = `<div class="tcard"><div class="empty">
+            <i class="ph ph-check-circle" style="color:var(--green)"></i>
+            <p>No alerts — everything looks good</p>
+        </div></div>`;
+    }
+
+    document.getElementById('ov-alerts').innerHTML = alerts;
+}
+
+/* ═══════════════════════════════════════════
+   COMPLIANCE
+═══════════════════════════════════════════ */
+/* ── Calendar state ── */
+let calYear  = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+let calEvents = [];   // { day, month, year, label, color }
+
+function parseDate(str) {
+    if (!str || typeof str !== 'string') return null;
+    str = str.trim();
+    if (!str) return null;
+
+    const MO = {
+        jan:0,feb:1,mar:2,apr:3,may:4,jun:5,
+        jul:6,aug:7,sep:8,oct:9,nov:10,dec:11,
+        january:0,february:1,march:2,april:3,june:5,
+        july:6,august:7,september:8,october:9,november:10,december:11
+    };
+
+    let m;
+
+    // DD-Mon-YYYY or DD Mon YYYY  →  "10-Jan-2025", "10 Jan 2025"
+    m = str.match(/^(\d{1,2})[\s\-\/]([A-Za-z]{3,9})[\s\-\/](\d{4})$/);
+    if (m) {
+        const d=parseInt(m[1],10), mo=MO[m[2].toLowerCase()], y=parseInt(m[3],10);
+        if (!isNaN(d) && mo!==undefined && !isNaN(y)) return new Date(y,mo,d);
+    }
+
+    // DD/MM/YYYY  →  "10/01/2025"  (UK locale, most common from Sheets)
+    m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) {
+        const d=parseInt(m[1],10), mo=parseInt(m[2],10)-1, y=parseInt(m[3],10);
+        if (!isNaN(d) && !isNaN(mo) && !isNaN(y)) return new Date(y,mo,d);
+    }
+
+    // YYYY-MM-DD  →  "2025-01-10"  (ISO / US Sheets export)
+    m = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m) {
+        const y=parseInt(m[1],10), mo=parseInt(m[2],10)-1, d=parseInt(m[3],10);
+        if (!isNaN(y) && !isNaN(mo) && !isNaN(d)) return new Date(y,mo,d);
+    }
+
+    // "Jan 10, 2025"  or  "10 Jan, 2025"
+    m = str.match(/^([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})$/);
+    if (m) {
+        const mo=MO[m[1].toLowerCase()], d=parseInt(m[2],10), y=parseInt(m[3],10);
+        if (mo!==undefined && !isNaN(d) && !isNaN(y)) return new Date(y,mo,d);
+    }
+    m = str.match(/^(\d{1,2})\s+([A-Za-z]{3,9}),?\s+(\d{4})$/);
+    if (m) {
+        const d=parseInt(m[1],10), mo=MO[m[2].toLowerCase()], y=parseInt(m[3],10);
+        if (!isNaN(d) && mo!==undefined && !isNaN(y)) return new Date(y,mo,d);
+    }
+
+    // MM/DD/YYYY  →  "01/10/2025"  (US locale)
+    m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) {
+        const mo=parseInt(m[1],10)-1, d=parseInt(m[2],10), y=parseInt(m[3],10);
+        if (!isNaN(mo) && !isNaN(d) && !isNaN(y)) return new Date(y,mo,d);
+    }
+
+    // Last resort — let the browser try
+    const native = new Date(str);
+    if (!isNaN(native.getTime())) return native;
+
+    return null;
+}
+
+function buildCalEvents(rows) {
+    const events = [];
+    rows.forEach(r => {
+        const sub = parseDate(r.SubmittedDate);
+        const app = parseDate(r.ApprovedDate);
+        const exp = parseDate(r.ExpiryDate);
+        const label = r.Document;
+        if (sub) events.push({ date:sub, label:`Submitted: ${label}`, color:'var(--blue)' });
+        if (app) events.push({ date:app, label:`Approved: ${label}`, color:'var(--green)' });
+        if (exp) events.push({ date:exp, label:`Expires: ${label}`, color: r.Status==='Action Required'?'var(--yellow)':'var(--red)' });
+    });
+    return events;
+}
+
+function renderCalendar() {
+    const MONTHS = ['January','February','March','April','May','June',
+                    'July','August','September','October','November','December'];
+    const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+    document.getElementById('cal-label').textContent = `${MONTHS[calMonth]} ${calYear}`;
+
+    const firstDay   = new Date(calYear, calMonth, 1).getDay();
+    const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+    const daysInPrev  = new Date(calYear, calMonth, 0).getDate();
+    const today       = new Date();
+
+    // Group events by date key
+    const evtMap = {};
+    calEvents.forEach(e => {
+        if (e.date.getFullYear() === calYear && e.date.getMonth() === calMonth) {
+            const k = e.date.getDate();
+            if (!evtMap[k]) evtMap[k] = [];
+            evtMap[k].push(e);
+        }
+    });
+
+    let html = DAYS.map(d => `<div class="cal-dow">${d}</div>`).join('');
+
+    // Prev month padding
+    for (let i = firstDay - 1; i >= 0; i--) {
+        html += `<div class="cal-day other"><div class="cal-day-num">${daysInPrev - i}</div></div>`;
+    }
+
+    // Current month
+    for (let d = 1; d <= daysInMonth; d++) {
+        const isToday = today.getDate()===d && today.getMonth()===calMonth && today.getFullYear()===calYear;
+        const evts    = evtMap[d] || [];
+        const hasEvt  = evts.length > 0;
+
+        // Short label: strip "Submitted:", "Approved:", "Expires:" prefix — keep doc name shortened
+        const chips = evts.slice(0,3).map(e => {
+            const parts  = e.label.split(': ');
+            const prefix = parts[0];          // "Submitted", "Approved", "Expires"
+            const doc    = parts[1] || '';
+            // Very short version: first word of doc name
+            const short  = doc.split(' ')[0] || prefix;
+            // Color: derive background from the color variable
+            const colorMap = {
+                'var(--blue)':  { bg:'rgba(96,165,250,0.18)',  fg:'#60a5fa' },
+                'var(--green)': { bg:'rgba(34,197,94,0.18)',   fg:'#22c55e' },
+                'var(--red)':   { bg:'rgba(239,68,68,0.18)',   fg:'#ef4444' },
+                'var(--yellow)':{ bg:'rgba(251,191,36,0.18)',  fg:'#FBBF24' },
+            };
+            const c = colorMap[e.color] || { bg:'rgba(96,165,250,0.18)', fg:'#60a5fa' };
+            return `<div class="cal-evt-chip" style="background:${c.bg};color:${c.fg}" title="${e.label}">${prefix}: ${short}</div>`;
+        }).join('');
+
+        html += `<div class="cal-day${isToday?' today':''}${hasEvt?' has-event':''}">
+            <div class="cal-day-num">${d}</div>
+            ${chips}
+        </div>`;
+    }
+
+    // Next month padding
+    const total = firstDay + daysInMonth;
+    const remaining = total % 7 === 0 ? 0 : 7 - (total % 7);
+    for (let d = 1; d <= remaining; d++) {
+        html += `<div class="cal-day other"><div class="cal-day-num">${d}</div></div>`;
+    }
+
+    document.getElementById('cal-grid').innerHTML = html;
+}
+
+/* ── Upload handling (demo — no actual storage) ── */
+let uploadedFiles = [];
+
+function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('upload-zone').classList.remove('drag-over');
+    handleFileSelect(e.dataTransfer.files);
+}
+
+function handleFileSelect(files) {
+    Array.from(files).forEach(f => {
+        uploadedFiles.push({ name:f.name, size:f.size, type:f.type, date: new Date() });
+    });
+    renderUploadList();
+}
+
+function renderUploadList() {
+    const compliance = mine(D.compliance);
+    const el = document.getElementById('upload-list');
+
+    // Show recently uploaded files first
+    let html = uploadedFiles.map(f => {
+        const ext = f.name.split('.').pop().toUpperCase();
+        const kb  = (f.size/1024).toFixed(0);
+        return `<div class="upload-item">
+            <div class="upload-icon" style="background:var(--blue-bg);color:var(--blue)">
+                <i class="ph ph-file-pdf"></i>
+            </div>
+            <div>
+                <div class="upload-doc-name">${f.name}</div>
+                <div class="upload-doc-meta">${ext} · ${kb} KB · Just uploaded</div>
+            </div>
+            <div class="upload-item-badge">
+                <span class="badge b-yellow"><span class="dot"></span>Pending Review</span>
+            </div>
+        </div>`;
+    }).join('');
+
+    // Show compliance docs as "on file"
+    html += compliance.map(r => {
+        const iconMap = {
+            'Approved':         { icon:'ph-file-check',  bg:'var(--green-bg)',  color:'var(--green)'  },
+            'Pending':          { icon:'ph-file-dashed', bg:'var(--yellow-bg)', color:'var(--yellow)' },
+            'In Review':        { icon:'ph-file-search', bg:'var(--blue-bg)',   color:'var(--blue)'   },
+            'Action Required':  { icon:'ph-file-x',      bg:'var(--red-bg)',    color:'var(--red)'    },
+        };
+        const style = iconMap[r.Status] || iconMap['Pending'];
+        return `<div class="upload-item">
+            <div class="upload-icon" style="background:${style.bg};color:${style.color}">
+                <i class="ph ${style.icon}"></i>
+            </div>
+            <div>
+                <div class="upload-doc-name">${r.Document}</div>
+                <div class="upload-doc-meta">
+                    ${r.SubmittedDate ? `Submitted ${r.SubmittedDate}` : 'Not yet submitted'}
+                    ${r.ExpiryDate ? ` · Expires ${r.ExpiryDate}` : ''}
+                </div>
+            </div>
+            <div class="upload-item-badge">${badge(r.Status)}</div>
+        </div>`;
+    }).join('');
+
+    el.innerHTML = html || `<div class="empty"><i class="ph ph-files"></i><p>No documents yet</p></div>`;
+}
+
+function renderCompliance() {
+    const rows    = mine(D.compliance);
+    const contact = (D.contacts || []).find(c => c.BrandName === brand.BrandName);
+    const counts  = {Approved:0, Pending:0, 'In Review':0, 'Action Required':0};
+    rows.forEach(r => { if (r.Status in counts) counts[r.Status]++; });
+
+    /* ── Stats ── */
+    document.getElementById('co-stats').innerHTML =
+        statCard('ph-check-circle','var(--green)','Approved',   counts.Approved,           'var(--green)',  'Cleared') +
+        statCard('ph-clock',       '',            'Pending',    counts.Pending,            'var(--yellow)', 'Awaiting review') +
+        statCard('ph-magnifying-glass','',        'In Review',  counts['In Review'],       'var(--blue)',   'Being processed') +
+        statCard('ph-warning',     'var(--red)',  'Action Req', counts['Action Required'], 'var(--red)',    'Needs input');
+
+    /* ── POC Card ── */
+    const poc = document.getElementById('co-poc');
+    if (contact && contact.POCName) {
+        const initials = contact.POCName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+        poc.innerHTML = `
+            <div class="poc-avatar-wrap">
+                <div class="poc-avatar">${initials}</div>
+                <div class="poc-online"><div class="poc-online-dot"></div>Available</div>
+            </div>
+            <div class="poc-name">${contact.POCName}</div>
+            <div class="poc-role">${contact.POCRole||'Compliance Consultant'} · Wescayl</div>
+            <hr class="poc-divider">
+            <div class="poc-contacts">
+                ${contact.POCEmail ? `<div class="poc-contact-row"><i class="ph ph-envelope"></i>${contact.POCEmail}</div>` : ''}
+                ${contact.POCPhone ? `<div class="poc-contact-row"><i class="ph ph-phone"></i>${contact.POCPhone}</div>` : ''}
+                <div class="poc-contact-row"><i class="ph ph-globe"></i>UK-based · GMT timezone</div>
+            </div>
+            ${contact.CalendlyLink
+                ? `<button class="poc-btn poc-btn-primary" onclick="window.open('${contact.CalendlyLink}','_blank')">
+                        <i class="ph ph-video-camera"></i> Schedule a video call
+                   </button>`
+                : `<button class="poc-btn poc-btn-primary">
+                        <i class="ph ph-video-camera"></i> Schedule a video call
+                   </button>`}
+            <button class="poc-btn poc-btn-secondary" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary)">
+                <i class="ph ph-chat-text"></i> Send a message
+            </button>`;
+    } else {
+        poc.innerHTML = `<div class="empty" style="padding:32px 0">
+            <i class="ph ph-user-circle"></i>
+            <p>No consultant assigned yet</p>
+            <p style="font-size:12px;margin-top:4px">Add a <strong>Contacts</strong> tab to your Google Sheet</p>
+        </div>`;
+    }
+
+    /* ── Calendar ── */
+    calEvents = buildCalEvents(rows);
+    // Auto-navigate to the first month that has events
+    if (calEvents.length > 0) {
+        const today = new Date();
+        const future = calEvents.filter(e => e.date >= today).sort((a,b) => a.date - b.date);
+        const past   = calEvents.filter(e => e.date <  today).sort((a,b) => b.date - a.date);
+        const target = future.length ? future[0].date : past.length ? past[0].date : today;
+        calYear  = target.getFullYear();
+        calMonth = target.getMonth();
+    } else {
+        calYear  = new Date().getFullYear();
+        calMonth = new Date().getMonth();
+    }
+    renderCalendar();
+
+    document.getElementById('cal-prev').onclick = () => {
+        calMonth--; if (calMonth < 0) { calMonth=11; calYear--; } renderCalendar();
+    };
+    document.getElementById('cal-next').onclick = () => {
+        calMonth++; if (calMonth > 11) { calMonth=0; calYear++; } renderCalendar();
+    };
+
+    /* ── Upload list ── */
+    renderUploadList();
+
+    /* ── Documents table ── */
+    document.getElementById('co-tbody').innerHTML = rows.length
+        ? rows.map(r=>`<tr>
+            <td class="pri">${r.Document}</td>
+            <td>${badge(r.Status)}</td>
+            <td>${r.SubmittedDate||'—'}</td>
+            <td>${r.ApprovedDate||'—'}</td>
+            <td>${r.ExpiryDate||'—'}</td>
+            <td style="color:var(--text-muted)">${r.Notes||'—'}</td>
+          </tr>`).join('')
+        : emptyRow(6,'ph-file-dashed','No compliance records found');
+}
+
+/* ═══════════════════════════════════════════
+   FREIGHT
+═══════════════════════════════════════════ */
+/* ── Freight quote state ── */
+let selectedShipType = 'lcl';
+
+function selectShipType(type) {
+    selectedShipType = type;
+    ['lcl','fcl','air'].forEach(t => {
+        document.getElementById(`type-${t}`).classList.toggle('selected', t === type);
+    });
+}
+
+function calculateQuote() {
+    const weight  = parseFloat(document.getElementById('q-weight').value)  || 500;
+    const pallets = parseFloat(document.getElementById('q-pallets').value) || 2;
+
+    // Rough CBM estimate from pallets (1 euro pallet ≈ 1.3 CBM at standard stacking)
+    const cbm = pallets * 1.3;
+
+    // Rate table (demo values)
+    const rates = {
+        lcl: { perCBM:180, min:450,  transit:'5–7 weeks', carrier:'Maersk / MSC (LCL)', port:'Felixstowe' },
+        fcl: { perCBM:110, min:2400, transit:'5–7 weeks', carrier:'Maersk / MSC (FCL)', port:'Felixstowe' },
+        air: { perKg:4.5,  min:800,  transit:'7–10 days', carrier:'Emirates / BA Cargo', port:'Heathrow' },
+    };
+    const r = rates[selectedShipType];
+    let cost;
+    if (selectedShipType === 'air') {
+        cost = Math.max(r.min, weight * r.perKg);
+    } else {
+        cost = Math.max(r.min, cbm * r.perCBM);
+    }
+
+    const insurance = cost * 0.012;
+    const totalEst  = cost + insurance;
+
+    document.getElementById('quote-result-grid').innerHTML = `
+        <div class="quote-result-item">
+            <label>Estimated Freight Cost</label>
+            <span style="color:var(--green)">£${Math.round(cost).toLocaleString()}</span>
+        </div>
+        <div class="quote-result-item">
+            <label>Insurance (1.2%)</label>
+            <span>£${Math.round(insurance).toLocaleString()}</span>
+        </div>
+        <div class="quote-result-item">
+            <label>Total Estimate</label>
+            <span style="font-size:18px">£${Math.round(totalEst).toLocaleString()}</span>
+        </div>
+        <div class="quote-result-item">
+            <label>Transit Time</label>
+            <span>${r.transit}</span>
+        </div>
+        <div class="quote-result-item">
+            <label>Carrier</label>
+            <span style="font-size:13px">${r.carrier}</span>
+        </div>
+        <div class="quote-result-item">
+            <label>UK Port</label>
+            <span style="font-size:13px">${r.port}</span>
+        </div>
+    `;
+    document.getElementById('quote-result').classList.add('show');
+}
+
+/* ── Consolidation calendar state ── */
+let cCalYear  = new Date().getFullYear();
+let cCalMonth = new Date().getMonth();
+
+function parseConsolDate(str) {
+    return parseDate(str);   // reuse compliance parseDate
+}
+
+function renderConsolCalendar() {
+    const consolData = D.consol || [];
+    const MONTHS = ['January','February','March','April','May','June',
+                    'July','August','September','October','November','December'];
+    const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+    document.getElementById('ccal-label').textContent = `${MONTHS[cCalMonth]} ${cCalYear}`;
+
+    const typeColors = {
+        'Cutoff':        'var(--red)',
+        'Consolidation': 'var(--accent)',
+        'Departure':     'var(--green)',
+        'ETA':           'var(--purple)',
+    };
+
+    // Build event map for this month
+    const evtMap = {};
+    consolData.forEach(row => {
+        const d = parseConsolDate(row.Date);
+        if (!d) return;
+        if (d.getFullYear() === cCalYear && d.getMonth() === cCalMonth) {
+            const k = d.getDate();
+            if (!evtMap[k]) evtMap[k] = [];
+            evtMap[k].push({ type: row.Type, notes: row.Notes, color: typeColors[row.Type] || 'var(--blue)' });
+        }
+    });
+
+    const firstDay    = new Date(cCalYear, cCalMonth, 1).getDay();
+    const daysInMonth = new Date(cCalYear, cCalMonth+1, 0).getDate();
+    const daysInPrev  = new Date(cCalYear, cCalMonth, 0).getDate();
+    const today       = new Date();
+
+    let html = DAYS.map(d => `<div class="cal-dow">${d}</div>`).join('');
+
+    for (let i = firstDay - 1; i >= 0; i--)
+        html += `<div class="cal-day other"><div class="cal-day-num">${daysInPrev - i}</div></div>`;
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const isToday = today.getDate()===d && today.getMonth()===cCalMonth && today.getFullYear()===cCalYear;
+        const evts    = evtMap[d] || [];
+        const hasEvt  = evts.length > 0;
+
+        const colorMap = {
+            'var(--red)':    { bg:'rgba(239,68,68,0.18)',   fg:'#ef4444' },
+            'var(--accent)': { bg:'rgba(27,77,153,0.25)',   fg:'#60a5fa' },
+            'var(--green)':  { bg:'rgba(34,197,94,0.18)',   fg:'#22c55e' },
+            'var(--purple)': { bg:'rgba(167,139,250,0.18)', fg:'#a78bfa' },
+        };
+
+        const chips = evts.slice(0,2).map(e => {
+            const c = colorMap[e.color] || { bg:'rgba(96,165,250,0.18)', fg:'#60a5fa' };
+            const label = e.notes ? `${e.type}` : e.type;
+            return `<div class="cal-evt-chip" style="background:${c.bg};color:${c.fg}" title="${e.type}${e.notes?' — '+e.notes:''}">${label}</div>`;
+        }).join('');
+
+        html += `<div class="cal-day${isToday?' today':''}${hasEvt?' has-event':''}">
+            <div class="cal-day-num">${d}</div>
+            ${chips}
+        </div>`;
+    }
+
+    const total = firstDay + daysInMonth;
+    const rem   = total % 7 === 0 ? 0 : 7 - (total % 7);
+    for (let d = 1; d <= rem; d++)
+        html += `<div class="cal-day other"><div class="cal-day-num">${d}</div></div>`;
+
+    document.getElementById('ccal-grid').innerHTML = html;
+
+    // Upcoming events list (next 60 days)
+    const upcoming = consolData
+        .map(row => ({ ...row, date: parseConsolDate(row.Date) }))
+        .filter(row => row.date && row.date >= today)
+        .sort((a,b) => a.date - b.date)
+        .slice(0, 5);
+
+    const upEl = document.getElementById('ccal-upcoming');
+    if (upcoming.length) {
+        upEl.innerHTML = upcoming.map(row => {
+            const color = typeColors[row.Type] || 'var(--blue)';
+            const dateStr = row.date.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+            return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+                <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></div>
+                <div>
+                    <div style="font-size:13px;font-weight:500">${row.Type}${row.Notes ? ` — ${row.Notes}` : ''}</div>
+                    <div style="font-size:11px;color:var(--text-muted)">${dateStr}</div>
+                </div>
+            </div>`;
+        }).join('');
+    } else {
+        upEl.innerHTML = `<div style="font-size:12px;color:var(--text-muted);padding:8px 0">No upcoming events — add data to the ConsolSchedule tab</div>`;
+    }
+}
+
+function renderFreight() {
+    const rows = mine(D.freight);
+    const inTransit  = rows.filter(r => r.Status === 'In Transit').length;
+    const confirmed  = rows.filter(r => r.Status === 'Booking Confirmed').length;
+    const customs    = rows.filter(r => r.Status === 'Customs Clearance').length;
+    const totalCBM   = rows.reduce((s,r) => s+n(r.CBM), 0);
+
+    document.getElementById('fr-stats').innerHTML =
+        statCard('ph-boat',   '',              'In Transit',       inTransit, '',              'Shipments at sea') +
+        statCard('ph-check',  '',              'Booking Confirmed',confirmed, 'var(--blue)',   'Not yet departed') +
+        statCard('ph-stamp',  'var(--purple)', 'Customs',          customs,   'var(--purple)', 'At UK border') +
+        statCard('ph-cube',   '',              'Total CBM',        totalCBM,  '',              'Across all shipments');
+
+    // Reset quote form state
+    selectedShipType = 'lcl';
+    ['lcl','fcl','air'].forEach(t => {
+        const el = document.getElementById(`type-${t}`);
+        if (el) el.classList.toggle('selected', t==='lcl');
+    });
+    const qr = document.getElementById('quote-result');
+    if (qr) qr.classList.remove('show');
+
+    // Consolidation calendar
+    // Auto-navigate to first upcoming consolidation event, else current month
+    const consolData = D.consol || [];
+    const today = new Date();
+    const upcoming = consolData
+        .map(r => parseConsolDate(r.Date))
+        .filter(d => d && d >= today)
+        .sort((a,b) => a - b);
+    if (upcoming.length) {
+        cCalYear  = upcoming[0].getFullYear();
+        cCalMonth = upcoming[0].getMonth();
+    } else {
+        cCalYear  = today.getFullYear();
+        cCalMonth = today.getMonth();
+    }
+    renderConsolCalendar();
+
+    document.getElementById('ccal-prev').onclick = () => {
+        cCalMonth--; if (cCalMonth < 0) { cCalMonth=11; cCalYear--; } renderConsolCalendar();
+    };
+    document.getElementById('ccal-next').onclick = () => {
+        cCalMonth++; if (cCalMonth > 11) { cCalMonth=0; cCalYear++; } renderConsolCalendar();
+    };
+
+    // Shipments table
+    document.getElementById('fr-tbody').innerHTML = rows.length
+        ? rows.map(r=>`<tr>
+            <td class="pri mono">${r.ShipmentID}</td>
+            <td>${r.OriginCity}</td>
+            <td>${r.DepartureDate||'—'}</td>
+            <td>${r.ETADate||'—'}</td>
+            <td>${r.Port}</td>
+            <td>${r.Carrier}</td>
+            <td>${r.CBM}</td>
+            <td>${badge(r.Status)}</td>
+          </tr>`).join('')
+        : emptyRow(8,'ph-boat','No shipments found');
+}
+
+/* ═══════════════════════════════════════════
+   INVENTORY
+═══════════════════════════════════════════ */
+function renderInventory() {
+    const rows = mine(D.inventory);
+    const totalWH   = rows.reduce((s,r) => s+n(r.StockWarehouse), 0);
+    const totalTR   = rows.reduce((s,r) => s+n(r.StockInTransit), 0);
+    const lowStock  = rows.filter(r => n(r.StockWarehouse)>0 && n(r.StockWarehouse)<=n(r.ReorderLevel)).length;
+    const outStock  = rows.filter(r => n(r.StockWarehouse)===0).length;
+
+    document.getElementById('inv-stats').innerHTML =
+        statCard('ph-warehouse','',             'In Warehouse', fmt(totalWH), '',              'Units ready to dispatch') +
+        statCard('ph-boat',     '',             'In Transit',   fmt(totalTR), 'var(--blue)',   'Units incoming') +
+        statCard('ph-warning',  'var(--yellow)','Low Stock',    lowStock,     'var(--yellow)', 'Below reorder level') +
+        statCard('ph-x-circle', 'var(--red)',   'Out of Stock', outStock,     'var(--red)',    'Zero warehouse stock');
+
+    document.getElementById('inv-tbody').innerHTML = rows.length
+        ? rows.map(r => {
+            const wh  = n(r.StockWarehouse), tr = n(r.StockInTransit), rl = n(r.ReorderLevel);
+            const pct = rl > 0 ? Math.min((wh/(rl*2))*100, 100) : (wh>0?100:0);
+            const level = wh===0 ? 'var(--red)' : wh<=rl ? 'var(--yellow)' : 'var(--green)';
+            const sStatus = wh===0 ? 'Out of Stock' : wh<=rl ? 'Low Stock' : 'OK';
+            return `<tr>
+                <td class="mono">${r.SKU}</td>
+                <td class="pri">${r.ProductName}</td>
+                <td>
+                    <div class="stock-wrap">
+                        <span>${fmt(wh)}</span>
+                        <div class="stock-bar">
+                            <div class="stock-fill" style="width:${pct}%;background:${level}"></div>
+                        </div>
+                    </div>
+                </td>
+                <td style="color:var(--blue)">${fmt(tr)}</td>
+                <td style="color:var(--text-muted)">${fmt(rl)}</td>
+                <td style="font-weight:600">${fmt(wh+tr)}</td>
+                <td>${badge(sStatus)}</td>
+                <td style="color:var(--text-muted)">${r.LastUpdated||'—'}</td>
+            </tr>`;
+        }).join('')
+        : emptyRow(8,'ph-warehouse','No inventory records found');
+}
+
+/* ═══════════════════════════════════════════
+   ORDERS
+═══════════════════════════════════════════ */
+function renderOrders() {
+    const rows       = mine(D.orders);
+    const delivered  = rows.filter(r => r.Status==='Delivered').length;
+    const dispatched = rows.filter(r => ['In Transit','Dispatched'].includes(r.Status)).length;
+    const processing = rows.filter(r => r.Status==='Processing').length;
+
+    document.getElementById('ord-stats').innerHTML =
+        statCard('ph-package',     '',              'Total Orders', rows.length,  '',              'All time') +
+        statCard('ph-check-circle','var(--green)',  'Delivered',    delivered,    'var(--green)',  'Successfully fulfilled') +
+        statCard('ph-truck',       '',              'In Transit',   dispatched,   'var(--blue)',   'Dispatched or in delivery') +
+        statCard('ph-clock',       'var(--yellow)', 'Processing',   processing,   'var(--yellow)', 'Being picked & packed');
+
+    document.getElementById('ord-tbody').innerHTML = rows.length
+        ? rows.map(r=>`<tr>
+            <td class="pri mono">${r.OrderID}</td>
+            <td>${r.Channel}</td>
+            <td>${r.OrderDate||'—'}</td>
+            <td>${r.DispatchDate||'—'}</td>
+            <td>${r.Carrier||'—'}</td>
+            <td class="mono" style="font-size:11px;color:var(--text-muted)">${r.TrackingNumber||'—'}</td>
+            <td>${badge(r.Status)}</td>
+          </tr>`).join('')
+        : emptyRow(7,'ph-package','No orders found');
+}
+
+/* ═══════════════════════════════════════════
+   RETURNS
+═══════════════════════════════════════════ */
+function renderReturns() {
+    const rows         = mine(D.returns);
+    const resaleable   = rows.filter(r => r.Condition==='Resaleable').length;
+    const repackage    = rows.filter(r => r.Condition==='Repackageable').length;
+    const writtenOff   = rows.filter(r => r.Condition==='Written Off').length;
+    const recovery     = rows.length > 0 ? Math.round(((resaleable+repackage)/rows.length)*100) : 0;
+
+    document.getElementById('ret-stats').innerHTML =
+        statCard('ph-arrows-clockwise','','Total Returns',  rows.length,  '',              'Items returned') +
+        statCard('ph-check-circle','var(--green)','Resaleable', resaleable,'var(--green)', 'Back into stock as-is') +
+        statCard('ph-package',     '',           'Repackageable',repackage,'var(--yellow)','Needs repackaging') +
+        statCard('ph-trend-up',    'var(--green)','Recovery Rate',`${recovery}%`,'var(--green)',`${writtenOff} written off`);
+
+    document.getElementById('ret-tbody').innerHTML = rows.length
+        ? rows.map(r=>`<tr>
+            <td class="pri mono">${r.ReturnID}</td>
+            <td class="mono">${r.OrderID}</td>
+            <td>${r.ReceivedDate||'—'}</td>
+            <td>${badge(r.Condition)}</td>
+            <td>${badge(r.Restocked)}</td>
+            <td style="color:var(--text-muted)">${r.Notes||'—'}</td>
+          </tr>`).join('')
+        : emptyRow(6,'ph-arrows-clockwise','No returns recorded');
+}
+
+/* ═══════════════════════════════════════════
+   MARKETING
+═══════════════════════════════════════════ */
+function renderMarketing() {
+    const rows        = mine(D.marketing);
+    const totalSpend  = rows.reduce((s,r) => s+n(r.Spend), 0);
+    const totalRev    = rows.reduce((s,r) => s+n(r.Revenue), 0);
+    const totalOrders = rows.reduce((s,r) => s+n(r.Orders), 0);
+    const totalImpr   = rows.reduce((s,r) => s+n(r.Impressions), 0);
+    const overallROAS = totalSpend > 0 ? (totalRev/totalSpend).toFixed(2) : '0';
+
+    document.getElementById('mkt-stats').innerHTML =
+        statCard('ph-currency-gbp','',            'Total Spend',  gbp(totalSpend),  '',             'Across all channels') +
+        statCard('ph-trend-up','var(--green)',     'Revenue',      gbp(totalRev),    'var(--green)', 'From paid campaigns') +
+        statCard('ph-chart-bar','',               'Overall ROAS', `${overallROAS}x`,'var(--green)', 'Return on ad spend') +
+        statCard('ph-eye','',                     'Impressions',  `${(totalImpr/1000).toFixed(0)}k`,'',`${fmt(totalOrders)} orders generated`);
+
+    // Channel cards
+    const CH_META = { icon:'ph-instagram-logo', color:'#1b4d99' };
+    const CH_TIK  = { icon:'ph-tiktok-logo',    color:'#0e7490' };
+    const CH_AMZ  = { icon:'ph-storefront',     color:'#92400e' };
+    const CH_GOO  = { icon:'ph-magnifying-glass',color:'#065f46' };
+    const CH_MAP  = { 'Meta':CH_META,'TikTok':CH_TIK,'Amazon UK Ads':CH_AMZ,'Google':CH_GOO };
+
+    const channels = [...new Set(rows.map(r=>r.Channel))];
+    document.getElementById('ch-cards').innerHTML = channels.map(ch => {
+        const cr   = rows.filter(r=>r.Channel===ch);
+        const sp   = cr.reduce((s,r)=>s+n(r.Spend),0);
+        const rv   = cr.reduce((s,r)=>s+n(r.Revenue),0);
+        const im   = cr.reduce((s,r)=>s+n(r.Impressions),0);
+        const or   = cr.reduce((s,r)=>s+n(r.Orders),0);
+        const cl   = cr.reduce((s,r)=>s+n(r.Clicks),0);
+        const roas = sp > 0 ? (rv/sp).toFixed(2) : '0';
+        const meta = CH_MAP[ch] || { icon:'ph-chart-line',color:'#1b4d99' };
+        return `<div class="ch-card">
+            <div class="ch-name" style="color:${meta.color}">
+                <i class="ph ${meta.icon}"></i>${ch}
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">Spend</div>
+            <div class="ch-spend">${gbp(sp)}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">ROAS</div>
+            <div class="ch-roas">${roas}x</div>
+            <div class="ch-row">
+                <div><div class="ch-mini-label">Impr.</div><div class="ch-mini-val">${(im/1000).toFixed(0)}k</div></div>
+                <div><div class="ch-mini-label">Clicks</div><div class="ch-mini-val">${fmt(cl)}</div></div>
+                <div><div class="ch-mini-label">Orders</div><div class="ch-mini-val">${or}</div></div>
+                <div><div class="ch-mini-label">Revenue</div><div class="ch-mini-val">${gbp(rv)}</div></div>
+            </div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('mkt-tbody').innerHTML = rows.length
+        ? rows.map(r => {
+            const roas = n(r.Spend)>0 ? (n(r.Revenue)/n(r.Spend)).toFixed(2) : '—';
+            const rc   = n(roas)>=4 ? 'var(--green)' : n(roas)>=2 ? 'var(--yellow)' : 'var(--red)';
+            return `<tr>
+                <td class="pri">${r.Channel}</td>
+                <td>${r.Month}</td>
+                <td>${gbp(r.Spend)}</td>
+                <td>${fmt(r.Impressions)}</td>
+                <td>${fmt(r.Clicks)}</td>
+                <td>${fmt(r.Orders)}</td>
+                <td style="color:var(--green)">${gbp(r.Revenue)}</td>
+                <td style="font-weight:700;color:${rc}">${roas}x</td>
+            </tr>`;
+        }).join('')
+        : emptyRow(8,'ph-chart-line','No marketing data found');
+}
+
+/* ── Boot ── */
+init();
+</script>
+</body>
+</html>
